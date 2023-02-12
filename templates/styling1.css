@@ -1,0 +1,12 @@
+.current-number{
+  border-style: solid;
+  width: 20%;
+  height: 30%;
+  float:  left;
+}
+.numComputed{
+  border-style: solid;
+  width: 20%;
+  height: 30%;
+  float: right;
+}

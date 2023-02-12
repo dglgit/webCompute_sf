@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>primes</title>
+  </head>
+  <body>
+    <script src="../static/comm.js" defer></script>
+    <script>
+      var worker,lastNum,currentNumber,lastResult;
+      var isRunning=false;
+      var numbersComputed=0;
+      function compute(num){
+        return num;
+      }
+      
+      function startStop(){
+        if(isRunning){
+          document.getElementById("strart_stop").innerHTML='stop';
+          failJob(lastNum);
+          worker.terminate();
+          
+        }else{
+          document.getElementById("strart_stop").innerHTML='start';
+          worker=new Worker("primeWorker.js");
+          worker.onmessage=(e)=>{
+            lastNum=e['lastNumber'];
+            lastResult=e['lastResult'];
+            currentNumber=e['currentNumber'];
+            document.getElementById('currentNumber').innerHTML=currentNumber;
+            document.getElementById("numbersComputed").innerHTML=++numbersComputed;
+          };
+        }
+        isRunning=!isRunning;
+      }
+    </script>
+    <div class="current-number">
+      <p>current number: </p>
+      <p id="currentNumber"></p>
+    </div>
+    <div class="numComputed">
+      <p>you have computed: </p>
+      <p id="numbersComputed">0</p>
+    </div>
+    <div class="controls">
+      <button id="start_stop" onclick="">start</button>
+    </div>
+  </body>
+</html>
