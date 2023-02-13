@@ -4,7 +4,7 @@ backend:
 /submit-job: submit a completed job
 to server: {
     "type": what type of job(collatz, prime, etc.),
-    "task": number that was just finished
+    "task": number that was just finished (actually ill submit an array instead)
     "result": result of computation 
     "key":(implement later) key to make sure the client isnt sending random submission. equal to hash(secretKey+number) that is given by server(secretKey changed regularly)
 }
@@ -57,3 +57,11 @@ has:
     - numbers that have been computed
     - a gif or something to show computations happening hehehehehehehhehehe
 {jobType}_worker.js: to be run in a webWorker process to compute a task of jobType
+
+benchmarking:
+make /benchmark-gui
+halts all clients until collective start signal is given
+when benchmarking:
+- return special value from /submit-job (probably -2) so that when all the clients see it they stop
+- return when you get to the end of the range being tested
+- also init db so that the starting value is correct 

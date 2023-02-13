@@ -5,17 +5,17 @@ jobs=['primes','collatz']
 app = Flask(__name__)
 CORS(app)
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database.db',check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
-
+conn=get_db_connection()
 def printDB(name):
-    conn=get_db_connection()
+    #conn=get_db_connection()
     data=conn.execute(f"SELECT * from {name}").fetchall()
     #print(data)
 @app.route('/get-job',methods=['POST'])
 def getJob():
-    print('got job',request.json)
+    #print('got job',request.json)
     rjson=request.json
     #print(rjson,type(rjson))
     jobType=rjson['type']
@@ -32,7 +32,7 @@ def getJob():
         #print(num)
         conn.execute(f"UPDATE {jobType}CurrentTask SET task=?",[num+1])
         conn.commit()
-    conn.close()
+    #conn.close()
     return jsonify({"task":num})
 
 @app.route('/register-disconnect',methods=['POST'])
@@ -41,11 +41,11 @@ def regDisconnect():
     #js send request with event listener 'beforeunload'
     computed=request.get('task')
     jobType=request.get('type')
-    conn=get_db_connection()
+    #conn=get_db_connection()
     #need to figure out how to handle different computing tasks 
     #conn.execute(f"INSERT INTO {jobType}Jobs(numbers,open) VALUES(?,0)",[computed])
-    conn.commit()
-    conn.close()
+    #conn.commit()
+    #conn.close()
     return 
 
 
@@ -58,10 +58,10 @@ def submitJob():
     result=args['result']
     jobType=args['type']
     #print(args)
-    conn = get_db_connection()
+    #conn = get_db_connection()
     conn.execute(f"INSERT INTO {jobType}Record(tasks,results) VALUES (?,?)",[int(computed),int(result)]) 
     conn.commit()
-    conn.close()
+    #conn.close()
     return '0'
 
 @app.route('/guis',methods=['GET'])

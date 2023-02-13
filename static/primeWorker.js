@@ -56,11 +56,13 @@ function compute(num){
     }
     return true;
 }
+
 async function mainloop(){
     var number=-1,result=-1,lastNum=-1;
     var i=7;
     while(i-->0){
         number= await getJob();
+        //NOTE: number is a sequential counting number while `input` is the actual prime(s) being tested
         console.log("task: "+number)
         postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
         result=compute(number);

@@ -1,6 +1,7 @@
 import sqlite3
 
 jobs=["primes", "collatz"]
+defaults={"primes":2**10-1,'collatz':1000}
 print(jobs)
 connection = sqlite3.connect('database.db')
 def clearTables(conn):
