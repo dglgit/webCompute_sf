@@ -32,6 +32,6 @@ async function failJob(num){
     return result;
 }
 window.addEventListener("beforeunload",function(e){
-    failJob(currentNumber);
+    //failJob(currentNumber);
     return "are you sture you want to stop?";
 });

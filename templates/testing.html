@@ -4,53 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>HTML 5 Boilerplate</title>
+    <title>testing page</title>
     <!--<link rel="stylesheet" href="style.css"> -->
   </head>
   <body>
 	<script src="../static/comm.js" defer></script>
-            <script>/*
-                var currentNumber;
-                async function getJob(){
-                    var number=0;
-                   var result= await fetch("http://127.0.0.1:5000/get-job",{
-                       method:'POST',
-                       body: ''
-                   });
-                    var jr=await result.json();
-                    number=jr['number']
-                    console.log(jr);
-                    return number;
-                }
-                async function submitJob(computedNum,result){
-                    var result = await fetch('http://127.0.0.1:5000/submit-job',{
-                        method:'POST',
-                        body:JSON.stringify({
-                            'computed':computedNum,
-                            'result':result
-                        })
-                    });
-                    var jr=await result.json();
-
-                    console.log(jr);
-                    return;
-                }
-                async function failJob(num){
-                    var result=await fetch("http://127.0.0.1/register-disconnect",{
-                        method:"POST",
-                        body: JSON.stringify({
-                            "computed":num
-                        })
-                    });
-
-                    return await result.json();
-                }
-                window.addEventListener("beforeunload",function(e){
-                    console.log("jshgiufdshguihdfsughuhdg");
-                    failJob(currentNumber);
-                    return "are you sture you want to stop?";
-                });*/
-            </script>
     <button id="getJobButton" onclick="getJob()"> get job</button>
     <button id="submitJobButton" onclick="submitJob()">submit job</button>
   </body>
