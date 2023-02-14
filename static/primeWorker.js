@@ -1,5 +1,6 @@
 var currentNumber;
-const addr="http://192.168.1.86:5000/"
+//const addr="http://192.168.1.86:5000/"
+const addr='http://127.0.0.1:5000/';
 async function getJob(){
     var jr;
     var result= await fetch(addr+"get-job",{
@@ -12,7 +13,7 @@ async function getJob(){
         })
     });
     jr=await result.json();
-    console.log(`data: ${jr}, task is ${jr['task']}`);
+    //console.log(`data: ${jr}, task is ${jr['task']}`);
     return jr['task'];
 }
 async function submitJob(computedNum,result){
@@ -21,9 +22,6 @@ async function submitJob(computedNum,result){
         'task': computedNum,
         'result': result
     });
-    console.log("body to submit: ")
-    console.log(dataBody)
-    console.log(computedNum)
     var result = await fetch(addr+'submit-job',{
         method:'POST',
         headers:{
@@ -38,9 +36,12 @@ async function submitJob(computedNum,result){
 async function failJob(num){
     var result=await fetch(addr+"register-disconnect",{
         method:"POST",
+        headers:{
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-            'type':'primes',
-            "task":num
+            "type":"primes",
+            "task": num
         })
     });
     return result;
@@ -58,12 +59,19 @@ function compute(num){
 }
 
 async function mainloop(){
+    console.log("starting");
     var number=-1,result=-1,lastNum=-1;
-    var i=7;
+    var i=300;
     while(i-->0){
+        //console.log("asdffsdf");
         number= await getJob();
+        if(number==-2){
+            console.log('stop signal recieved quitting ')
+            postMessage("q");
+            return;
+        }
         //NOTE: number is a sequential counting number while `input` is the actual prime(s) being tested
-        console.log("task: "+number)
+        //console.log("task: "+number)
         postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
         result=compute(number);
         await submitJob(number,result);

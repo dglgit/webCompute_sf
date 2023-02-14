@@ -1,7 +1,7 @@
 import sqlite3
 
 jobs=["primes", "collatz"]
-defaults={"primes":2**10-1,'collatz':1000}
+defaults={"primes":2**20-1,'collatz':1000}
 print(jobs)
 connection = sqlite3.connect('database.db')
 def clearTables(conn):
@@ -17,16 +17,16 @@ clearTables(connection)
 for job in jobs:
     connection.executescript(f"""
         CREATE TABLE {job}Record(
-            tasks INTEGER,
-            results INTEGER
+            tasks TEXT,
+            results TEXT
         );
         CREATE TABLE {job}Failed(
-            tasks INTEGER
+            tasks TEXT
         );
         CREATE TABLE {job}CurrentTask(
-            task INTEGER DEFAULT 0
+            task TEXT
         );
-        INSERT into {job}CurrentTask (task) VALUES(0);
+        INSERT into {job}CurrentTask (task) VALUES({defaults[job]});
     """)
 cur=connection.cursor()    
 tables=connection.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
@@ -34,7 +34,7 @@ for table, in tables:
     print(table)
     print(cur.execute(f"SELECT * FROM {table}").description)
 
-
+connection.close()
 '''
 with open('schema.sql') as f:
     connection.executescript(f.read())

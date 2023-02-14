@@ -2,13 +2,19 @@ import sqlite3
 from flask import Flask, render_template, request,jsonify
 from flask_cors import CORS
 import time
+from init_db import defaults#will run the file and reset the database
 jobs=['primes','collatz']
 TASK_LENGTH=100
-nextBenchTime=time.time()+5000
+nextBenchTime=time.time()+20#time.time is seconds
+endTime=None
+globalVars={'stopFlag':False}
+stopFlag=False
+benchAmt=100
+endValues={'primes': defaults['primes']+benchAmt,'collatz': defaults['collatz']+benchAmt}
 app = Flask(__name__)
-CORS(app)# idea from https://stackoverflow.com/questions/26980713/solve-cross-origin-resource-sharing-with-flask
+CORS(app)
 def get_db_connection():
-    conn = sqlite3.connect('database.db',check_same_thread=False)
+    conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
 #conn=get_db_connection()
@@ -17,35 +23,37 @@ def printDB(name):
     data=conn.execute(f"SELECT * from {name}").fetchall()
     conn.close()
     #print(data)
-@app.route('/sync-bench',methods=['POST','GET'])
+
+@app.route('/sync-benchmark',methods=['GET'])
 def syncBench():
-    rjson=request.json
-    return nextBenchTime-time.time()
+    return str(nextBenchTime) #in seconds
+
 @app.route('/get-job',methods=['POST'])
 def getJob():
-    #print('got job',request.json)
-    rjson=request.json
-    #print(rjson,type(rjson))
-    jobType=rjson['type']
-    
-    conn=get_db_connection()
-    
-    nums=conn.execute(f"SELECT * from {jobType}Failed").fetchall()
-    if len(nums)>0:
-        num=nums[0]['numbers']
-        conn.execute(f"DELETE * from {jobType}Failed WHERE numbers=?",num)
+    if not globalVars['stopFlag']:
+        rjson=request.json
+        jobType=rjson['type']
+        
+        conn=get_db_connection()
+        
+        nums=conn.execute(f"SELECT * from {jobType}Failed").fetchall()
+        if len(nums)>0:
+            num=nums[0]['numbers']
+            conn.execute(f"DELETE * from {jobType}Failed WHERE numbers=?",num)
+        else:
+            num=int(conn.execute(f"SELECT task from {jobType}CurrentTask").fetchall()[0]['task'])
+            conn.execute(f"UPDATE {jobType}CurrentTask SET task=?",[num+1])
+            conn.commit()
+        conn.close()
+        return jsonify({"task":num})
     else:
-        #printDB(f'{jobType}CurrentTask')
-        num=int(conn.execute(f"SELECT task from {jobType}CurrentTask").fetchall()[0]['task'])
-        #print(num)
-        conn.execute(f"UPDATE {jobType}CurrentTask SET task=?",[num+1])
-        conn.commit()
-    conn.close()
-    return jsonify({"task":num})
+        print(request.json)
+        return jsonify({'task':-2})
 
 @app.route('/register-disconnect',methods=['POST'])
 def regDisconnect():
-    print(f'disconnected, response was: {request.json}')
+    print(f'disconnected, last request was {request.json}')
+
     #js send request with event listener 'beforeunload'
     computed=request.json['task']
     jobType=request.json['type']
@@ -59,18 +67,18 @@ def regDisconnect():
 
 @app.route("/submit-job",methods=['POST'])
 def submitJob():
-    #print('job submitted')
     args=request.json
-    #print(args)
-    computed=args['task']#will probably be list
+    computed=args['task']#will probably be list(later)
     result=args['result']
     jobType=args['type']
-    #print(args)
     conn = get_db_connection()
-    #conn.executemany(f"INSERT INTO {jobType}Record(tasks,results) VALUES (?,?)",[list(map(int, result)),result]) 
-    conn.execute(f"INSERT INTO {jobType}Record(tasks,results) VALUES (?,?)",[int(result),result])
+    conn.execute(f"INSERT INTO {jobType}Record(tasks,results) VALUES (?,?)",[int(computed),result])
     conn.commit()
     conn.close()
+    if int(computed)>=endValues[jobType]:#python has nice native arbitrary int support 
+        #technically not thread safe but since i will only ever be setting it to be True i think its fine
+        globalVars['stopFlag']=True
+        print(time.time()-nextBenchTime)
     return '0'
 
 @app.route('/guis',methods=['GET'])

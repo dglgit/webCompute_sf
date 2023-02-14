@@ -6,28 +6,47 @@
   </head>
   <body>
     <script>
-      var worker,lastNum,currentNumber,lastResult;
-      
+      var worker,lastNum=-1,currentNumber=-1,lastResult=-1;
+      async function failJob(num){
+        var result=await fetch("http://127.0.0.1:5000/register-disconnect",{
+            method:"POST",
+            headers:{
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'type':'primes',
+                "task": num
+            })
+        });
+        return result;
+      }
+      window.addEventListener("beforeunload",function(e){
+          failJob(currentNumber);
+          return "are you sture you want to stop?";
+      });
       var isRunning=false;
       var numbersComputed=0;
-      function compute(num){
-        return num;
-      }
       
       function startStop(){
         if(isRunning){
-          document.getElementById("start_stop").innerHTML='stop';
+          document.getElementById("start_stop").innerHTML='start';
           failJob(lastNum);
           worker.terminate();
-          
-        }else{
-          document.getElementById("start_stop").innerHTML='start';
+          isRunning=false;
+        }else{//isRunning = false
+          isRunning=true;
+          document.getElementById("start_stop").innerHTML='stop';
           worker=new Worker("../static/primeWorker.js");
           worker.onmessage=(e)=>{
-            
+            if(e.data=='q'){
+              isRunning=false;
+              worker.terminate();
+              return;
+            }
             var data=JSON.parse(e.data);
-            console.log("message is: "+JSON.stringify(data));
-            console.log("keys is: "+data["lastNumber"]);
+            
+            //console.log("message is: "+JSON.stringify(data));
+            //console.log("keys is: "+data["lastNumber"]);
             
             lastNum=data['lastNumber'];
             lastResult=data['lastResult'];
@@ -36,7 +55,47 @@
             document.getElementById("numbersComputed").innerHTML=++numbersComputed;
           };
         }
-        isRunning=!isRunning;
+      }
+      function sleep(ms) {
+        console.log(`sleeping for ${ms}`);
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      async function benchmark(){
+        try{
+          var res = await fetch("http://127.0.0.1:5000/sync-benchmark");
+         // console.log(await res.text());
+          res=parseFloat(await res.text());
+          var timeDelay=res*1000-Date.now();//now in ms
+        } catch (error){
+          document.getElementById("benchStatus").innerHTML="server is not currently running";
+          return -3;
+        }
+        if(timeDelay<0){
+          document.getElementById("benchStatus").innerHTML="server gives negative response";
+          return -3;
+        } 
+        
+        document.getElementById("benchStatus").innerHTML=`starting in ${timeDelay}ms`;
+        console.log(timeDelay)
+        await sleep(timeDelay);
+        document.getElementById("benchStatus").innerHTML="benching...";
+        isRunning=false;
+        startStop();
+        
+        return 0;
+      }
+
+      async function persistentBenchmark(){
+        await benchmark();
+        while(true){
+          if(!isRunning){
+            await benchmark();
+          }else{
+            await sleep(1000);
+          }
+          
+        }
       }
     </script>
     <div class="current-number">
@@ -49,6 +108,11 @@
     </div>
     <div class="controls">
       <button id="start_stop" onclick="startStop();">start</button>
+    </div>
+    <div class="benchmarking">
+      <p id="benchStatus">press the button to start</p>
+      <button id="benchmarkControl" onclick="benchmark();">press to start</button>
+      <button id="persistentBenchmarkControl" onclick="persistentBenchmark();">persistent benchmarking</button>
     </div>
   </body>
 </html>

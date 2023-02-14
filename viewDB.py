@@ -6,8 +6,11 @@ print(conn.row_factory)
 def printTable(name):
     print(name)
     res=conn.execute(f'SELECT * from {name}').fetchall()
+    if len(res)==0:
+        print(f'{name} rowcount is 0')
+
+        return 
     first=dict(**res[0])
-    print(first,'asdfdasf')
     baseDict={key:[] for key in first}
     for row in res:
         d=dict(**row)
@@ -17,4 +20,4 @@ def printTable(name):
 
 
 printTable('primesRecord')
-
+printTable("primesCurrentTask")

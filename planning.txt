@@ -1,67 +1,69 @@
 backend:
-- handles communicating which numbers to send and recieve 
+    - handles communicating which numbers to send and recieve 
+    - NEW: server will now give a range of values to compute for better optimization and speed(maybe actually lemme test big nums first )
+    /submit-job: submit a completed job
+    to server: {
+        "type": what type of job(collatz, prime, etc.),
+        "task": number that was just finished (actually ill submit an array instead(later))
+        "result": result of computation 
+        "key":(implement later) key to make sure the client isnt sending random submission. equal to hash(secretKey+number) that is given by server(secretKey changed regularly)
+    }
+    response:{
+        "status": 0 for success 1 for error?
+    } 0 for success 1 for error?
 
-/submit-job: submit a completed job
-to server: {
-    "type": what type of job(collatz, prime, etc.),
-    "task": number that was just finished (actually ill submit an array instead)
-    "result": result of computation 
-    "key":(implement later) key to make sure the client isnt sending random submission. equal to hash(secretKey+number) that is given by server(secretKey changed regularly)
-}
-response:{
-    "status": 0 for success 1 for error?
-} 0 for success 1 for error?
+    /get-job
+    to server: {
+        "type": type of job
+        idk probably just get request
+        maybe you have to register with the server first and provide the key you recieve(which changes later)? idk implement later
+    }
+    response:
+    {
+        "key": hash mentioned above, required to submit later(implement later)
+        "task": number to compute
+    }
 
-/get-job
-to server: {
-    "type": type of job
-    idk probably just get request
-    maybe you have to register with the server first and provide the key you recieve(which changes later)? idk implement later
-}
-response:
-{
-    "key": hash mentioned above, required to submit later(implement later)
-    "task": number to compute
-}
+    /register-disconnect:
+    to server:{
+        'type': type of job,
+        'task': task that was failed on
+    }
+    response:{
+        'result':0
+    }
 
-/register-disconnect:
-to server:{
-    'type': type of job,
-    'task': task that was failed on
-}
-response:{
-    'result':0
-}
 sqlite:
-- for every type of job there are three types of tables
-1. {jobType}Record:(
-    tasks: numbers that have been computed
-    results: results for each number
-    maybe extra thing for notes for collatz
-)
-2. {jobType}Failed:(
-    tasks:numbers whose tasks failed to compute
-)
-3. {jobType}CurrentTask:(
-    task: single number that will be queried if failed is empty
-)
-job: type of thing you want to compute(collatz, prime)
-task: the thing youre working on(a number)
-frontend:
-/guis?type={}: gui for each job type
-input arg(format in url like in a GET request):
-    - render_template(f"{type}_gui.html")
-    - if guis without anything maybe return a landing page with buttons
-has: 
-    - current number being computed
-    - numbers that have been computed
-    - a gif or something to show computations happening hehehehehehehhehehe
-{jobType}_worker.js: to be run in a webWorker process to compute a task of jobType
+    - for every type of job there are three types of tables
+    - the ones the hold numbers might have to hold strings to handle arbitrary size numbers 
+    1. {jobType}Record:(
+        tasks: numbers that have been computed
+        results: results for each number
+        maybe extra thing for notes for collatz
+    )
+    2. {jobType}Failed:(
+        tasks:numbers whose tasks failed to compute
+    )
+    3. {jobType}CurrentTask:(
+        task: single number that will be queried if failed is empty
+    )
+    job: type of thing you want to compute(collatz, prime)
+    task: the thing youre working on(a number)
+    frontend:
+    /guis?type={}: gui for each job type
+    input arg(format in url like in a GET request):
+        - render_template(f"{type}_gui.html")
+        - if guis without anything maybe return a landing page with buttons
+    has: 
+        - current number being computed
+        - numbers that have been computed
+        - a gif or something to show computations happening hehehehehehehhehehe
+    {jobType}_worker.js: to be run in a webWorker process to compute a task of jobType
 
 benchmarking:
-make /benchmark-gui
-halts all clients until collective start signal is given
-when benchmarking:
-- return special value from /submit-job (probably -2) so that when all the clients see it they stop
-- return when you get to the end of the range being tested
-- also init db so that the starting value is correct 
+    make /sync-benchmark
+    - returns time until everyone starts
+    when benchmarking:
+    - return special value from /submit-job (probably -2) so that when all the clients see it they stop
+    - return when you get to the end of the range being tested
+    - also init db so that the starting value is correct 

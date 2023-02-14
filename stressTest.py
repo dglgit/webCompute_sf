@@ -2,12 +2,13 @@ import requests
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-url="http://127.0.0.1:5000/"
+url="http://192.168.1.86:5000/"
 
 def sequentialTest(iters):
     start=time.time()
     for i in range(iters):
         res=requests.post(url+'get-job',json={'type':'primes'})
+        #print(res.json())
         task=res.json()['task']
         requests.post(url+'submit-job',json={'type':'primes',"task":task,'result':False})
     elapsed=time.time()-start
@@ -24,6 +25,8 @@ def parallelTest(workers):
     elapsed=time.time()-start
     #print(responses)
     print(f"total time was {elapsed}s")
-sequentialTest(100)
-time.sleep(1)
-#parallelTest(100)
+
+if __name__=='__main__':
+    sequentialTest(100)
+    time.sleep(1)
+    #parallelTest(1000)

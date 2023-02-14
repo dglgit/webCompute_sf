@@ -35,23 +35,14 @@ async function submitJob(computedNum,result){
     //console.log(jr);
     return;
 }
-async function failJob(num){
-    var result=await fetch(addr+"register-disconnect",{
-        method:"POST",
-        body: JSON.stringify({
-            'type':'primes',
-            "task":num
-        })
-    });
-    return result;
-}
+
 function compute(num){
     var count=0;
     while(num>1){
         if(num%2==0){
-            n/=2;
+            num/=2;
         }else{
-            n=3*n+1;
+            num=3*num+1;
         }
         ++count;
     }
@@ -59,7 +50,7 @@ function compute(num){
 }
 async function mainloop(){
     var number=-1,result=-1,lastNum=-1;
-    var i=7;
+    var i=7000;
     while(i-->0){
         number= await getJob();
         console.log("task: "+number)
