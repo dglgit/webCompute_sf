@@ -37,6 +37,7 @@ function bigIntPow(base,e){
     return start
 }
 function bigIntPrime(num){
+    console.log(num);
     if(num%2n==0){
         return false;
     }
@@ -80,7 +81,25 @@ function bench(func,start,iters,msg){
     }
     console.timeEnd();
 }
-bench(isPrime,Math.pow(2,52)-1,100,"primes");
-bench(bigIntPrime,BigInt(bigIntPow(2n,100n)-1n),100n,"big int primes");
+
+function lucasLehmer(p){
+    var num = 2**p-1;
+    var val = 4%num;
+    for(var i=0;i<p;++i){
+        val = (val*val-2)%num;
+    }
+    return val==0;//is prime
+}
+function lucasLehmerBigInt(p){
+    var num = 2n**p-1;
+    var val = 4n%num;
+    for(var i=0;i<p;++i){
+        val=(val*val-2)%num;
+    }
+    return num==0;
+}
+
+bench(isPrime,Math.pow(2,52)-1,1000,"primes");
+bench(bigIntPrime,BigInt(2n**100n-1n),100n,"big int primes");//2^100-1 is good
 bench(computeCollatz,100000,1000,"collatz");
 bench(bigIntComputeCollatz,BigInt(Math.pow(2,30)),1000n,"big int collatz");

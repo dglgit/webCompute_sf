@@ -5,7 +5,8 @@ import time
 from init_db import defaults#will run the file and reset the database
 jobs=['primes','collatz']
 TASK_LENGTH=100
-nextBenchTime=time.time()+20#time.time is seconds
+benchGracePeriod=20
+nextBenchTime=time.time()+benchGracePeriod#time.time is seconds
 endTime=None
 globalVars={'stopFlag':False}
 stopFlag=False
@@ -27,7 +28,11 @@ def printDB(name):
 @app.route('/sync-benchmark',methods=['GET'])
 def syncBench():
     return str(nextBenchTime) #in seconds
-
+@app.route('/reset-benchmark',methods=['GET'])
+def resetBench():
+    global nextBenchTime
+    nextBenchTime=time.time()+benchGracePeriod
+    return '0'
 @app.route('/get-job',methods=['POST'])
 def getJob():
     if not globalVars['stopFlag']:

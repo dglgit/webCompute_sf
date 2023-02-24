@@ -46,6 +46,9 @@ async function failJob(num){
     });
     return result;
 }
+//https://www.geeksforgeeks.org/aks-primality-test/
+
+//super naive brute force prime checker
 function compute(num){
     if(num%2==0){
         return false;
@@ -57,6 +60,69 @@ function compute(num){
     }
     return true;
 }
+
+function modPow(base, ex, m){
+    var res=1n;
+    while(ex>0){
+      if(ex&1n){
+        res*=base;
+      }
+      res=res*res;
+      res%=m;
+      ex>>1n;
+    }
+    return res%m;
+  }
+  function singleMillerRabin(number,s,d){
+      //credit to wikipedia and geeks for geeks
+      var n=number-1n;
+      var a = BigInt(2+Math.floor(Math.random()*(Number(n)-3)));
+      if((a%number)**d%number==1){
+          return true;
+      }
+      for(var r=0n;r<s;++r){
+          if((a%number)**(2**r*d)%number==(number-1n)){
+              return true;
+          }
+      }
+      return false;
+  }
+  
+  function millerRabin(number,iterations){
+    var n = number-1n;
+    var copyN=n;
+    var d;
+    var s=0n;
+    
+    while(!(copyN&1n)){
+        ++s;
+        copyN=copyN>>1n;
+    }
+    d=n>>s;
+    for(var i=0;i<iterations;++i){
+      console.log(performance.now());
+        if(!singleMillerRabin(number,s,d)){
+            return false;
+        }
+    }
+    return true;
+  }
+  function testRange(start,end,riters){
+    var count=0;
+    for(var i=start;i<end;i+=2n){
+      if(millerRabin(i,riters)){
+        count++;
+      }
+    }
+    console.log(count);
+    return count;
+  }
+  var start=performance.now()
+  //console.log(millerRabin(2n**24n-1n,20n))
+  testRange(2n**23n-1n,2n**23n+99n,10);
+  var end = performance.now()
+  
+  console.log(end-start);
 
 async function mainloop(){
     console.log("starting");
