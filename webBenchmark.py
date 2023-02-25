@@ -10,7 +10,7 @@ nextBenchTime=time.time()+benchGracePeriod#time.time is seconds
 endTime=None
 globalVars={'stopFlag':False}
 stopFlag=False
-benchAmt=100
+benchAmt=32
 endValues={'primes': defaults['primes']+benchAmt,'collatz': defaults['collatz']+benchAmt}
 app = Flask(__name__)
 CORS(app)

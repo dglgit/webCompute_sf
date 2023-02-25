@@ -6,9 +6,12 @@
   </head>
   <body>
     <script>
+      //var addr='http://127.0.0.1:5000/';
+      //var addr='http://192.168.1.86:5000/';
+      var addr='http://10.241.124.235:5000/'
       var worker,lastNum=-1,currentNumber=-1,lastResult=-1;
       async function failJob(num){
-        var result=await fetch("http://127.0.0.1:5000/register-disconnect",{
+        var result=await fetch(addr+"register-disconnect",{
             method:"POST",
             headers:{
             'Content-Type': 'application/json'
@@ -77,7 +80,7 @@
           return -1;
         }
         try{
-          var res = await fetch("http://127.0.0.1:5000/sync-benchmark");
+          var res = await fetch(addr+"sync-benchmark");
          // console.log(await res.text());
           res=parseFloat(await res.text());
           startTime=Date.now();

@@ -1,6 +1,7 @@
 var currentNumber;
 //const addr="http://192.168.1.86:5000/"
-const addr='http://127.0.0.1:5000/';
+const addr ="http://10.241.124.235:5000/"
+//const addr='http://127.0.0.1:5000/';
 async function getJob(){
     var jr;
     var result= await fetch(addr+"get-job",{
@@ -60,6 +61,14 @@ function compute(num){
     }
     return true;
 }
+function sleep(ms) {
+    console.log(`sleeping for ${ms}`);
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+async function sleepCompute(num){
+    await sleep(1100);
+    return false;
+}
 
 function modPow(base, ex, m){
     var res=1n;
@@ -72,57 +81,52 @@ function modPow(base, ex, m){
       ex>>1n;
     }
     return res%m;
-  }
-  function singleMillerRabin(number,s,d){
-      //credit to wikipedia and geeks for geeks
-      var n=number-1n;
-      var a = BigInt(2+Math.floor(Math.random()*(Number(n)-3)));
-      if((a%number)**d%number==1){
-          return true;
-      }
-      for(var r=0n;r<s;++r){
-          if((a%number)**(2**r*d)%number==(number-1n)){
-              return true;
-          }
-      }
-      return false;
-  }
-  
-  function millerRabin(number,iterations){
+}
+function singleMillerRabin(number,s,d){
+    //credit to wikipedia and geeks for geeks
+    var n=number-1n;
+    var a = BigInt(2+Math.floor(Math.random()*(Number(n)-3)));
+    if((a%number)**d%number==1){
+        return true;
+    }
+    for(var r=0n;r<s;++r){
+        if((a%number)**(2**r*d)%number==(number-1n)){
+            return true;
+        }
+    }
+    return false;
+}
+
+function millerRabin(number,iterations){
     var n = number-1n;
     var copyN=n;
     var d;
     var s=0n;
-    
+
     while(!(copyN&1n)){
         ++s;
         copyN=copyN>>1n;
     }
     d=n>>s;
     for(var i=0;i<iterations;++i){
-      console.log(performance.now());
+        console.log(performance.now());
         if(!singleMillerRabin(number,s,d)){
             return false;
         }
     }
     return true;
-  }
-  function testRange(start,end,riters){
+}
+function testRange(start,end,riters){
     var count=0;
     for(var i=start;i<end;i+=2n){
-      if(millerRabin(i,riters)){
-        count++;
-      }
+        if(millerRabin(i,riters)){
+            count++;
+        }
     }
     console.log(count);
     return count;
-  }
-  var start=performance.now()
-  //console.log(millerRabin(2n**24n-1n,20n))
-  testRange(2n**23n-1n,2n**23n+99n,10);
-  var end = performance.now()
-  
-  console.log(end-start);
+}
+
 
 async function mainloop(){
     console.log("starting");
@@ -139,7 +143,7 @@ async function mainloop(){
         //NOTE: number is a sequential counting number while `input` is the actual prime(s) being tested
         //console.log("task: "+number)
         postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
-        result=compute(number);
+        result=await sleepCompute(number);
         await submitJob(number,result);
         lastNum=number;
         

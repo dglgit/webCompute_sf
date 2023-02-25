@@ -1,3 +1,4 @@
+
 function isPrime(num){
     if(num%2==0){
         return false;
@@ -91,15 +92,106 @@ function lucasLehmer(p){
     return val==0;//is prime
 }
 function lucasLehmerBigInt(p){
-    var num = 2n**p-1;
+    var num = 2n**p-1n;
     var val = 4n%num;
     for(var i=0;i<p;++i){
-        val=(val*val-2)%num;
+        val=(val*val-2n)%num;
     }
     return num==0;
 }
+function modPow(base, ex, m){
+    var res=1n;
+    while(ex>0){
+      if(ex&1n){
+        res*=base;
+      }
+      res=res*res;
+      res%=m;
+      ex>>1n;
+    }
+    return res%m;
+}
+function singleMillerRabin(number,s,d){
+    //credit to wikipedia and geeks for geeks
+    var n=number-1n;
+    var a = BigInt(2+Math.floor(Math.random()*(Number(n)-3)));
+    if((a%number)**d%number==1){
+        return true;
+    }
+   // console.log(`s is ${s}`)
+    
+    for(var r=0n;r<s;++r){
+        //console.log(`r is ${r}`);
+        if((a%number)**(2n**r*d)%number==(number-1n)){//instead of doing it from scratch everytime i can just square it everytime
+            return true;
+        }
+    }
+    return false;
+}
+function singleMillerRabin2(number,s,d){
+    var n=number-1n;
+    var a = BigInt(2+Math.floor(Math.random()*(Number(n)-3)));
+    console.log(d)
+    var start=(a%number)**d%number;
+    //console.log(start)
+    if(start==1 || start==n){
+        return true;
+    }
+    console.log("testing powers of 2d")
+    
+    for(var r=1n;r<s;++r){
+        start=(start*start)%number
+        if(start==(number-1n)){//instead of doing it from scratch everytime i can just square it everytime
+            return true;
+        }
+    }
+    return false;
+}
+function millerRabin(number,iterations){
+    var n = number-1n;
+    var copyN=n;
+    var d;
+    var s=0n;
 
+    while(!(copyN&1n)){
+        console.log(`copyN is ${copyN}`)
+        ++s;
+        copyN=copyN>>1n;
+    }
+    d=n>>s;
+    for(var i=0;i<iterations;++i){
+        console.log(i);
+        if(!singleMillerRabin2(number,s,d)){
+            return false;
+        }
+    }
+    return true;
+}
+function testRange(start,end,riters){
+    var count=0;
+    for(var i=start;i<end;i+=2n){
+        if(millerRabin(i,riters)){
+            count++;
+        }
+    }
+    console.log(count);
+    return count;
+}
+var start=Date.now()
+console.log(2n**18n-1n)
+//console.log(millerRabin(2n**19n-1n,20n))//passed(true)
+//console.log(millerRabin(2n**20n-1n,20n))//passed(false) only took 1 iteration
+console.log(millerRabin(2n**31n-1n,20n))//
+//console.log(millerRabin(2n**18n-1n,20n))
+//testRange(2n**19n-1n,2n**19n+99n,20n);//pretty good pacing although the first one is a prime which takes the longest
+//console.log(lucasLehmerBigInt(1978798800n))
+//testRange(2n**23n-1n,2n**23n+99n,10);
+var end = Date.now()
+
+console.log(end-start);
+/*
 bench(isPrime,Math.pow(2,52)-1,1000,"primes");
 bench(bigIntPrime,BigInt(2n**100n-1n),100n,"big int primes");//2^100-1 is good
 bench(computeCollatz,100000,1000,"collatz");
 bench(bigIntComputeCollatz,BigInt(Math.pow(2,30)),1000n,"big int collatz");
+*/
