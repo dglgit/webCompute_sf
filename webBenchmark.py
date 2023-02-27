@@ -3,30 +3,36 @@ from flask import Flask, render_template, request,jsonify
 from flask_cors import CORS
 import time
 from init_db import defaults#will run the file and reset the database
+import threading
+from threading import Lock
+lock=Lock()
 jobs=['primes','collatz']
 TASK_LENGTH=100
+BENCHMODE=True
 benchGracePeriod=20
 nextBenchTime=time.time()+benchGracePeriod#time.time is seconds
 endTime=None
 globalVars={'stopFlag':False}
 stopFlag=False
-benchAmt=32
-endValues={'primes': defaults['primes']+benchAmt,'collatz': defaults['collatz']+benchAmt}
+benchAmt=10
+endValues={'primes': int(defaults['primes'])+benchAmt*2,'collatz': defaults['collatz']+benchAmt}
 app = Flask(__name__)
-CORS(app)
+CORS(app,resources={r'/*':{'origins':'*'}})
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('database.db',check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
-#conn=get_db_connection()
+conn=get_db_connection()
 def printDB(name):
-    conn=get_db_connection()
-    data=conn.execute(f"SELECT * from {name}").fetchall()
-    conn.close()
+    #conn=get_db_connection()
+    with lock:
+        data=conn.execute(f"SELECT * from {name}").fetchall()
+    #conn.close()
     #print(data)
 
 @app.route('/sync-benchmark',methods=['GET'])
 def syncBench():
+    print(f'address:{request.remote_addr}')
     return str(nextBenchTime) #in seconds
 @app.route('/reset-benchmark',methods=['GET'])
 def resetBench():
@@ -35,24 +41,25 @@ def resetBench():
     return '0'
 @app.route('/get-job',methods=['POST'])
 def getJob():
-    if not globalVars['stopFlag']:
+    if not BENCHMODE or not globalVars['stopFlag']:
         rjson=request.json
         jobType=rjson['type']
         
-        conn=get_db_connection()
-        
-        nums=conn.execute(f"SELECT * from {jobType}Failed").fetchall()
-        if len(nums)>0:
-            num=nums[0]['numbers']
-            conn.execute(f"DELETE * from {jobType}Failed WHERE numbers=?",num)
-        else:
-            num=int(conn.execute(f"SELECT task from {jobType}CurrentTask").fetchall()[0]['task'])
-            conn.execute(f"UPDATE {jobType}CurrentTask SET task=?",[num+1])
-            conn.commit()
-        conn.close()
-        return jsonify({"task":num})
+        #conn=get_db_connection()
+        with lock:
+            nums=conn.execute(f"SELECT * from {jobType}Failed").fetchall()
+            if len(nums)>0:
+                num=nums[0]['numbers']
+                conn.execute(f"DELETE * from {jobType}Failed WHERE numbers=?",num)
+            else:
+                num=int(conn.execute(f"SELECT task from {jobType}CurrentTask").fetchall()[0]['task'])
+                conn.execute(f"UPDATE {jobType}CurrentTask SET task=?",[str(num+2)])
+                conn.commit()
+            #conn.close()
+            #print("get job num type is: ",type(num))
+            return jsonify({"task":str(num)})
     else:
-        print(request.json)
+        print("stop flag true",request.json)
         return jsonify({'task':-2})
 
 @app.route('/register-disconnect',methods=['POST'])
@@ -76,11 +83,12 @@ def submitJob():
     computed=args['task']#will probably be list(later)
     result=args['result']
     jobType=args['type']
-    conn = get_db_connection()
-    conn.execute(f"INSERT INTO {jobType}Record(tasks,results) VALUES (?,?)",[int(computed),result])
-    conn.commit()
-    conn.close()
-    if int(computed)>=endValues[jobType]:#python has nice native arbitrary int support 
+    #conn = get_db_connection()
+    with lock:
+        conn.execute(f"INSERT INTO {jobType}Record(tasks,results) VALUES (?,?)",[computed,result])
+        conn.commit()
+    #conn.close()
+    if BENCHMODE and int(computed)>=endValues[jobType]:#python has nice native arbitrary int support 
         #technically not thread safe but since i will only ever be setting it to be True i think its fine
         globalVars['stopFlag']=True
         print(time.time()-nextBenchTime)

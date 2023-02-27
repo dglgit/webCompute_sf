@@ -177,17 +177,33 @@ function testRange(start,end,riters){
     console.log(count);
     return count;
 }
+function sleep(ms) {
+    console.log(`sleeping for ${ms}`);
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+async function sleepComputeTest(iters){
+    var start = Date.now();
+    for(var i=0;i<iters;++i){
+        await sleep(1100);
+    }
+    var end = Date.now();
+    console.log(`sleep elapsed was: ${end-start}`)
+}
+
+sleepComputeTest(32);
+
 var start=Date.now()
-console.log(2n**18n-1n)
+//console.log(2n**18n-1n)
 //console.log(millerRabin(2n**19n-1n,20n))//passed(true)
 //console.log(millerRabin(2n**20n-1n,20n))//passed(false) only took 1 iteration
-console.log(millerRabin(2n**31n-1n,20n))//
+//console.log(millerRabin(2n**31n-1n,20n))//
+
 //console.log(millerRabin(2n**18n-1n,20n))
 //testRange(2n**19n-1n,2n**19n+99n,20n);//pretty good pacing although the first one is a prime which takes the longest
 //console.log(lucasLehmerBigInt(1978798800n))
 //testRange(2n**23n-1n,2n**23n+99n,10);
 var end = Date.now()
-
+console.log(`elapsed: ${end-start}`)
 console.log(end-start);
 /*
 bench(isPrime,Math.pow(2,52)-1,1000,"primes");
