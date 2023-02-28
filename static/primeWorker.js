@@ -1,9 +1,9 @@
 var currentNumber;
 //const addr="http://192.168.1.86:5000/"//att
-//const addr='http://192.168.86.241:5000/'//ji tzuoh lins
+const addr='http://192.168.86.241:5000/'//ji tzuoh lins
 importScripts("https://cdn.jsdelivr.net/npm/gmp-wasm/dist/mini.umd.min.js")
 //const addr ="http://10.241.124.235:5000/"
-const addr='http://127.0.0.1:5000/';
+//const addr='http://127.0.0.1:5000/';
 function makeInt(val,binding){
     const result = binding.mpz_t();
     binding.mpz_init_set_si(result,val);
@@ -54,9 +54,38 @@ function millerRabinGMPLow(numberPtr,iters, binding){//number should also be poi
 }
 async function getJob(){
     var jr,result;
+    //no idea why this still breaks randomly
+    try{
+        result=await fetch(addr+'get-job',{
+            method:'POST',
+            headers:{
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'type':'primes'
+            })
+        });
+        console.log(result.status);
+        jr=await result.json();
+        return jr['task']
+    }catch(error){//do it again
+        console.log('fetch failed first time retrying')
+        result=await fetch(addr+'get-job',{
+            method:'POST',
+            headers:{
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'type':'primes'
+            })
+        });
+        console.log(result.status);
+        jr=await result.json();
+        return jr['task']
+    }
 
     //randomly breaks sometimes with typerror maybe because all the request have the same ip address for some reason
-    return await fetch(addr+"get-job",{
+    /*return await fetch(addr+"get-job",{
         method:'POST',
         headers:{
             'Content-Type': 'application/json'
@@ -65,6 +94,8 @@ async function getJob(){
             'type':'primes'
         })
     }).then(async (f)=>{result=await f.json();console.log(`fetch worked, ${result.toString()}`);return result['task']}).catch(async (r)=>{console.log("fetch failed "+r.message)})
+    */
+
     /*
     result= await fetch(addr+"get-job",{
         method:'POST',
@@ -118,6 +149,36 @@ function stringToGmp(s,binding){
     binding.mpz_init_set_str(ptr,sptr,10);
     return ptr;
 }
+function collatz(numberPtrOg,binding){
+    const numberPtr=binding.mpz_t();
+    binding.mpz_add(numberPtr,numberPtrOg,makeInt(0,binding));
+    const three=makeInt(3,binding);
+    const one = makeInt(1,binding);
+    const two=makeInt(2,binding);
+    const count = makeInt(1,binding);
+    //console.log([binding.mpz_to_string(numberPtr,10),binding.mpz_cmp_ui(numberPtr,one)]);
+    while(binding.mpz_cmp_ui(numberPtr,1)>0){
+        //console.log(binding.mpz_to_string(numberPtr,10));
+        if(binding.mpz_tstbit(numberPtr,0)){
+            binding.mpz_mul(numberPtr,numberPtr,three);
+            binding.mpz_add(numberPtr,numberPtr,one);
+        }else{
+            binding.mpz_divexact(numberPtr,numberPtr,two);
+        }
+        binding.mpz_add(count,count,one);
+    }
+    //binding.mpz_clears(numberPtr);
+    binding.mpz_t_frees(numberPtr);
+    return binding.mpz_to_string(count,10);
+}
+async function computeCollatz(num){
+    return await gmp.init().then(({binding})=>{
+        const numPtr=stringToGmp(num,binding);
+        let result=collatz(numPtr,binding);
+        binding.reset();
+        return result;
+    })
+}
 async function compute(num){
     return await gmp.init().then(({binding})=>{
         const numPtr=stringToGmp(num,binding);
@@ -139,7 +200,7 @@ async function sleepCompute(num){
 async function mainloop(){
     console.log("starting");
     var number=-1,result=-1,lastNum=-1;
-    var i=30;
+    var i=300;
     while(i-->0){
         //console.log("asdffsdf");
         number = await getJob();//number might be a string from now on

@@ -4,6 +4,59 @@
         <p>working</p>
         <script src="https://cdn.jsdelivr.net/npm/gmp-wasm/dist/mini.umd.min.js"></script>
         <script>
+            
+            function collatz(numberPtrOg,binding){
+                const numberPtr=binding.mpz_t();
+                binding.mpz_add(numberPtr,numberPtrOg,makeInt(0,binding));
+                const three=makeInt(3,binding);
+                const one = makeInt(1,binding);
+                const two=makeInt(2,binding);
+                const count = makeInt(1,binding);
+                //console.log([binding.mpz_to_string(numberPtr,10),binding.mpz_cmp_ui(numberPtr,one)]);
+                while(binding.mpz_cmp_ui(numberPtr,1)>0){
+                    //console.log(binding.mpz_to_string(numberPtr,10));
+                    if(binding.mpz_tstbit(numberPtr,0)){
+                        binding.mpz_mul(numberPtr,numberPtr,three);
+                        binding.mpz_add(numberPtr,numberPtr,one);
+                    }else{
+                        binding.mpz_divexact(numberPtr,numberPtr,two);
+                    }
+                    binding.mpz_add(count,count,one);
+                }
+                //binding.mpz_clears(numberPtr);
+                binding.mpz_t_frees(numberPtr);
+                return binding.mpz_to_string(count,10);
+            }
+            async function testCollatz(iters){
+                await gmp.init().then(({binding})=>{
+                    console.log('starting collatz test')
+                    const gstart=makeMersenneLow(1000,binding);
+                    let two = makeInt(2,binding);
+                    let totalTime=0;
+                    for(let i =0;i<iters;++i){
+                        let startTime=Date.now();
+                        let res=collatz(gstart,binding);
+                        //console.log(res)
+                        let elapsed=Date.now()-startTime;
+                        totalTime+=elapsed;
+                        binding.mpz_add(gstart,gstart,two);
+                        
+                    }
+                    console.log(`${iters} iters of collatz testing took ${totalTime}, avg ${totalTime/iters} per iteration`);
+                    binding.reset();
+                })
+            }
+            function lucasLehmer(p,binding){
+                const mersenne= makeMersenneLow(p,binding);
+                const s = makeInt(4,binding);
+                const two=makeInt(2,binding)
+                for(var i=0;i<p-2;++i){
+                    binding.mpz_mul(s,s,s);
+                    binding.mpz_add(s,s,two);
+                    binding.mpz_mod(s,s,mersenne);
+                }
+                return binding.mpz_get_si(s)==0;//true means prime
+            }
             function singleMillerRabinGMPLow(numberPtr,s,d,binding){//all inputs are pointers
                 //gmp.init().then(({binding})=>{
                     //console.log(binding)
@@ -21,41 +74,13 @@
                     const two = makeInt(2,binding);
                     for(let i=0;i<binding.mpz_get_si(s);++i){
                         binding.mpz_powm(start,start,two,numberPtr);
-                        if(binding.mpz_get_si(start)==actualMinus1){
+                        if(binding.mpz_cmp_ui(start,actualMinus1)==0){
                             return true;
                         }
                     }
+                    //binding.mpz_t_frees(actualMinus1,start,a,one)
                     return false;
                 //})
-            }
-            function collatz(originalNumber,binding){
-                const numberPtr=binding.mpz_t();
-                binding.mpz_add(numberPtr,originalNumber,makeInt(0,binding))
-                const three=makeInt(3,binding);
-                const one = makeInt(1,binding);
-                const two=makeInt(2,binding);
-                const count = makeInt(1,binding);
-                while(binding.mpz_get_si(numberPtr)>1){
-                    if(binding.mpz_tstbit(numberPtr,0)){
-                        binding.mpz_mul(numberPtr,numberPtr,three);
-                        binding.mpz_add(numberPtr,numberPtr,one);
-                    }else{
-                        binding.mpz_divexact(numberPtr,numberPtr,two);
-                    }
-                    binding.mpz_add(count,count,one);
-                }
-                return binding.mpz_to_string(count,10);
-            }
-            function lucasLehmer(p,binding){
-                const mersenne= makeMersenneLow(p,binding);
-                const s = makeInt(4,binding);
-                const two=makeInt(2,binding)
-                for(var i=0;i<p-2;++i){
-                    binding.mpz_mul(s,s,s);
-                    binding.mpz_add(s,s,two);
-                    binding.mpz_mod(s,s,mersenne);
-                }
-                return binding.mpz_get_si(s)==0;//true means prime
             }
             function millerRabinGMPLow(numberPtr,iters, binding){//number should also be pointer
                 //console.log(binding)
@@ -74,27 +99,14 @@
                         return false;
                     }
                 }
+                //binding.mpz_t_frees(d,two,one)
                 return true;
             }
-            async function testMillerRabinGMPLow(start, iters=3){
-                await gmp.init().then(({binding})=>{
-                    let numbers=[];
-                    const startNum=makeMersenneLow(start,binding);
-                    for(let i=0;i<iters;++i){
-                        let element=binding.mpz_t();
-                        binding.mpz_add(element,startNum,makeInt(2*i,binding))
-                        numbers.push(element);
-                    }
-                    for(var n of numbers){
-                        millerRabinGMPLow(n,10,binding);
-                        console.log('one done');
-                    }
-                    binding.reset();
-                })
-            }
+            
             async function testPrimeFull(iters){
-                gmp.init().then(({binding})=>{
-                    const start=makeMersenneLow(3217,binding);
+                await gmp.init().then(({binding})=>{
+                    console.log("starting prime test")
+                    const start=makeMersenneLow(3217,binding);//3217
                     let totalTime=0;
                     const two=makeInt(2,binding);
                     for(let i=0;i<iters;++i){
@@ -105,7 +117,8 @@
                         binding.mpz_add(start,start,two);
                         
                     }
-                    console.log(`${iters} iters of miller rabin testing took ${totalTime}, avg ${totalTime/iters} per iteration`)
+                    console.log(`${iters} iters of miller rabin testing took ${totalTime}, avg ${totalTime/iters} per iteration`);
+                    binding.reset()
                 })
                 
             }
@@ -135,43 +148,24 @@
                 binding.mpz_init_set_si(result,val);
                 return result;
             }
-            async function gmpPlay(){
-                gmp.init().then(({binding})=>{
-                    calculate((g)=>{
-                        const a = makeInt(3,binding);
-                        const b = makeInt(3,binding);
-                        console.log(binding.mpz_get_si(a)==binding.mpz_get_si(b));
-                        console.log(binding.mpz_even_p(a))
-                        console.log(binding.mpz_get_si(a))
-                        g.Integer(3);
-                    });
-                    
-                });
+            
+            function sleep(ms){
+                return new Promise(resolve => setTimeout(resolve, ms));
             }
-            async function simpleBench(fn,iters){
-                var totalTime=0;
-
+            async function sleepBench(iters, delay){
+                console.log('starting sleep bench')
+                let start=Date.now();
                 for(let i=0;i<iters;++i){
-                    let start=Date.now();
-                    await fn();
-                    let elapsed=Date.now()-start;
-                    totalTime+=elapsed;
+                    await sleep(delay);
                 }
-                console.log(`${fn.name} took ${totalTime/iters} on average(${iters} iters) and ${totalTime} overall`);
-            }
-            async function testCollatz(start, iters){
-                await gmp.init().then(({binding})=>{
-                    const gstart=makeInt(start,binding);
-                    let one = makeInt(1,binding)
-                    for(let i =0;i<iters;++i){
-                        let res=collatz(gstart,binding);
-                        binding.mpz_add(gstart,gstart,one);
-                        console.log(`res: ${res}`)
-                    }
-                })
+                let elapsed=Date.now()-start;
+                console.log(`sleep test took ${elapsed} overall, average of ${elapsed/iters}`);
             }
             async function mainLoop(){
-                await testPrimeFull(10)
+                //await testPrimeFull(10);
+                //await testCollatz(1000);
+                await testPrimeFull(32);
+                //await sleepBench(32,1100);
                 //await simpleBench(async function mr(){await testMillerRabinGMPLow(3253,10)},1);
                 //await simpleBench(async function tc(){await testCollatz(200000,10000)},1)
             }

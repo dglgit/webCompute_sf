@@ -7,15 +7,14 @@ import threading
 from threading import Lock
 lock=Lock()
 jobs=['primes','collatz']
-TASK_LENGTH=100
 BENCHMODE=True
-benchGracePeriod=20
+benchGracePeriod=20#amount of time in seconds from restarting server and benchmarking
 nextBenchTime=time.time()+benchGracePeriod#time.time is seconds
 endTime=None
 globalVars={'stopFlag':False}
 stopFlag=False
 benchAmt=10
-endValues={'primes': int(defaults['primes'])+benchAmt*2,'collatz': defaults['collatz']+benchAmt}
+endValues={'primes': int(defaults['primes'])+32*2,'collatz': int(defaults['collatz'])+2000}
 app = Flask(__name__)
 CORS(app,resources={r'/*':{'origins':'*'}})
 def get_db_connection():
