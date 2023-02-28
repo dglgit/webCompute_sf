@@ -30,13 +30,13 @@
             async function testCollatz(iters){
                 await gmp.init().then(({binding})=>{
                     console.log('starting collatz test')
-                    const gstart=makeMersenneLow(1000,binding);
+                    const gstart=makeMersenneLow(1,binding);
                     let two = makeInt(2,binding);
                     let totalTime=0;
                     for(let i =0;i<iters;++i){
                         let startTime=Date.now();
                         let res=collatz(gstart,binding);
-                        //console.log(res)
+                        console.log([res,binding.mpz_get_si(gstart)])
                         let elapsed=Date.now()-startTime;
                         totalTime+=elapsed;
                         binding.mpz_add(gstart,gstart,two);
@@ -119,8 +119,7 @@
                     }
                     console.log(`${iters} iters of miller rabin testing took ${totalTime}, avg ${totalTime/iters} per iteration`);
                     binding.reset()
-                })
-                
+                }) 
             }
             function gmpProbablePrime(number,iters){
                 return gmp.init().then(({calculate})=>{
@@ -163,9 +162,11 @@
             }
             async function mainLoop(){
                 //await testPrimeFull(10);
-                //await testCollatz(1000);
-                await testPrimeFull(32);
-                //await sleepBench(32,1100);
+                await testCollatz(1000);
+                await testPrimeFull(8);
+
+                await sleepBench(32,0);
+
                 //await simpleBench(async function mr(){await testMillerRabinGMPLow(3253,10)},1);
                 //await simpleBench(async function tc(){await testCollatz(200000,10000)},1)
             }

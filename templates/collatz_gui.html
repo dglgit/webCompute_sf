@@ -2,19 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>collatz</title>
+    <title>primes</title>
   </head>
   <body>
     <script>
+      //var addr='http://127.0.0.1:5000/';
+      //var addr='http://192.168.1.86:5000/';
+      var addr='http://192.168.86.241:5000/';//ji tzuoh lins
+      //var addr='http://10.241.124.235:5000/'
       var worker,lastNum=-1,currentNumber=-1,lastResult=-1;
       async function failJob(num){
-        var result=await fetch("http://127.0.0.1:5000/register-disconnect",{
+        var result=await fetch(addr+"register-disconnect",{
             method:"POST",
             headers:{
             'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                'type':'primes',
+                'type':'collatz',
                 "task": num
             })
         });
@@ -24,42 +28,94 @@
           failJob(currentNumber);
           return "are you sture you want to stop?";
       });
-      var isRunning=false;
+      var isRunning=false, isBenching=false;
       var numbersComputed=0;
-      
+      function stopJob(){
+        document.getElementById("start_stop").innerHTML='start';
+        failJob(lastNum);
+        worker.terminate();
+        isRunning=false;
+      }
+      function startJob(){
+        isRunning=true;
+        document.getElementById("start_stop").innerHTML='stop';
+        worker=new Worker("../static/collatzWorker.js");
+        worker.onmessage=(e)=>{
+          if(e.data=='q'){
+            //isRunning=false;
+            console.log('just terminated due to server signal');
+            var endTime=Date.now();
+            console.log(`start: ${startTime}, end: ${endTime}, elapsed: ${endTime-startTime}ms`)
+            worker.terminate();
+            isBenching=false;
+            return;
+          }
+          var data=JSON.parse(e.data);
+          
+          //console.log("message is: "+JSON.stringify(data));
+          //console.log("keys is: "+data["lastNumber"]);
+          
+          lastNum=data['lastNumber'];
+          lastResult=data['lastResult'];
+          currentNumber=data['currentNumber'];
+          document.getElementById('currentNumber').innerHTML=currentNumber;
+          document.getElementById("numbersComputed").innerHTML=++numbersComputed;
+        };
+      }
       function startStop(){
         if(isRunning){
-          document.getElementById("start_stop").innerHTML='start';
-          failJob(lastNum);
-          worker.terminate();
-          
-        }else{//isRunning = false
-          document.getElementById("start_stop").innerHTML='stop';
-          worker=new Worker("../static/collatzWorker.js");
-          worker.onmessage=(e)=>{
-            
-            var data=JSON.parse(e.data);
-            console.log("message is: "+JSON.stringify(data));
-            console.log("keys is: "+data["lastNumber"]);
-            
-            lastNum=data['lastNumber'];
-            lastResult=data['lastResult'];
-            currentNumber=data['currentNumber'];
-            document.getElementById('currentNumber').innerHTML=currentNumber;
-            document.getElementById("numbersComputed").innerHTML=++numbersComputed;
-          };
+          stopJob();
+        }else{
+          startJob();
         }
-        isRunning=!isRunning;
       }
+      function sleep(ms) {
+        console.log(`sleeping for ${ms}`);
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+      var startTime;
       async function benchmark(){
-        var res = await fetch("http://192.168.1.86:5000/sync-benchmark",{
-          method:"GET"
-        });
-        var timeDelay=parseInt(await res.text());
-        setTimeout(()=>{
-          isRunning=false;
-          startStop();
-        },timeDelay)
+        if(isBenching){
+          //already benching dont be called again
+          return -1;
+        }
+        try{
+          var res = await fetch(addr+"sync-benchmark");
+         // console.log(await res.text());
+          res=parseFloat(await res.text());
+          startTime=Date.now();
+          var timeDelay=res*1000-startTime;//now in ms
+          startTime+=timeDelay;
+        } catch (error){
+          document.getElementById("benchStatus").innerHTML="server is not currently running";
+          return -3;
+        }
+        if(timeDelay<0){
+          document.getElementById("benchStatus").innerHTML="server gives negative response";
+          return -3;
+        } 
+        isBenching=true;
+        document.getElementById("benchStatus").innerHTML=`starting in ${timeDelay}ms`;
+        console.log(timeDelay);
+        await sleep(timeDelay);
+        document.getElementById("benchStatus").innerHTML="benching...";
+        startJob();
+        
+        return 0;
+      }
+
+      async function persistentBenchmark(){
+        if(isBenching){
+          isBenching=false;
+          return;//will probably stop benching after the current benchmark task has finished 
+        }
+        
+        while(true){
+          var code=await benchmark();
+          if (code!=0){
+            await sleep(500);
+          }
+        }
       }
     </script>
     <div class="current-number">
@@ -76,6 +132,7 @@
     <div class="benchmarking">
       <p id="benchStatus">press the button to start</p>
       <button id="benchmarkControl" onclick="benchmark();">press to start</button>
+      <button id="persistentBenchmarkControl" onclick="persistentBenchmark();">persistent benchmarking</button>
     </div>
   </body>
 </html>
