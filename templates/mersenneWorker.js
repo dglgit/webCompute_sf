@@ -119,14 +119,14 @@ async function submitJob(computedNum,result){
         'task': computedNum,
         'result': result
     });
-    await fetch(addr+'submit-job',{
+    var result = await fetch(addr+'submit-job',{
         method:'POST',
         headers:{
             'Content-Type': 'application/json'
         },
         body: dataBody
     });
-    //var jr=await result.json();
+    var jr=await result.json();
     //console.log(jr);
     return;
 }
@@ -199,25 +199,31 @@ async function sleepCompute(num){
 function nothing(x){
     return true;
 }
-
+function nativeLucasLehmer(p){
+    let mersenne=2n**p-1n;
+    let s=4n;
+    for(let i=0;i<p-2n;++i){
+        //console.log(s)
+        s=(s*s-2n)%mersenne;
+    }
+    return s==0n;
+}
 async function mainloop(){
     console.log("starting");
     var number=-1,result=-1,lastNum=-1;
     var i=300;
     while(i-->0){
         //console.log("asdffsdf");
-        number = await getJob();//number might be a string from now on
+        number = await getJob();//number might be a string from now on and also the exponent of 2^p-1 and not the number
         if(number==-2){
             console.log('stop signal recieved quitting ')
             postMessage("q");
             return;
         }
-        //NOTE: number is a sequential counting number while `input` is the actual prime(s) being tested
-        //console.log("task: "+number)
+        let bn=BigInt(number);
+        let result=nativeLucasLehmer(bn)
         postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
-        //result=await compute(number);
-        result=false;//nothing(number);
-        //await submitJob(number,result);
+        
         await submitJob(number,result);
         lastNum=number;
         
@@ -228,64 +234,3 @@ function strToMpz(str,out,binding){
     binding.mpz_init_set_str(out,strPtr,10);
     binding.mpz_t_frees(strPtr);
 }
-async function gmpMainloop(){
-    console.log("starting");
-    await gmp.init().then(async ({binding})=>{
-        const iters=40;
-        var number=-1,result=-1,lastNum=-1;
-        var i=3000;
-        let s=0;
-        const a=binding.mpz_t();
-        const start=binding.mpz_t();
-        const minus1=binding.mpz_t();
-        const d=binding.mpz_t();
-        const numberPtr=binding.mpz_t();
-        const two = makeInt(2,binding);
-        while(i-->0){
-            number = await getJob();
-            if(number==-2){
-                console.log('stop signal recieved quitting ')
-                postMessage("q");
-                return;
-            }
-            postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
-            strToMpz(number,numberPtr,binding);
-            binding.mpz_sub_ui(d,numberPtr,1);
-            
-            while(binding.mpz_tstbit(d,0)){//bitcnt might just be a js number
-                binding.mpz_divexact(d,d,two);
-                s++;
-            }
-            
-            binding.mpz_sub_ui(minus1,numberPtr,1);
-            let flag=false;
-            for(let i=0;i<iters;++i){
-                flag=false;
-                binding.mpz_set_ui(a,2+Math.floor(Math.random()*(binding.mpz_get_si(numberPtr)-3)));
-                
-                binding.mpz_powm(start,a,d,numberPtr);
-                if(binding.mpz_cmp_ui(start,1)==0 || binding.mpz_cmp(start,minus1)==0){
-                    flag=true;
-                    continue;
-                }
-                for(let i=0;i<s;++i){
-                    binding.mpz_powm(start,start,two,numberPtr);
-                    if(binding.mpz_cmp(start,minus1)==0){
-                        flag=true;
-                        break;
-                    }
-                }
-                if(!flag){
-                    break;//flag will be false
-                }
-                //binding.mpz_t_frees(actualMinus1,start,a,one)
-            }
-            //binding.mpz_t_frees(d,two,one)
-            result=flag;
-            await submitJob(number,result);
-            lastNum=number;
-    }
-    });   
-}
-//gmpMainloop();
-mainloop();

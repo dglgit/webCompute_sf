@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>collatz</title>
+    <title>mersenne</title>
   </head>
   <body>
     <script>
@@ -18,7 +18,7 @@
             'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                'type':'collatz',
+                'type':'mersenne',
                 "task": num
             })
         });
@@ -39,9 +39,7 @@
       function startJob(){
         isRunning=true;
         document.getElementById("start_stop").innerHTML='stop';
-        console.log('making worker')
-        //fetch('../static/collatzWorker.js').then(d=>d.text()).then(t=>console.log(t));
-        worker=new Worker("../static/collatzWorker.js");
+        worker=new Worker("../static/mersenneWorker.js");
         worker.onmessage=(e)=>{
           if(e.data=='q'){
             //isRunning=false;
@@ -52,23 +50,18 @@
             isBenching=false;
             return;
           }
-          
           var data=JSON.parse(e.data);
-          //console.log(e.data)
-          if(data['balls']!=undefined){
-            return;
-          }
+          
           //console.log("message is: "+JSON.stringify(data));
           //console.log("keys is: "+data["lastNumber"]);
           
           lastNum=data['lastNumber'];
           lastResult=data['lastResult'];
           currentNumber=data['currentNumber'];
-          //console.log("current number is "+currentNumber)
           document.getElementById('currentNumber').innerHTML=currentNumber;
           document.getElementById("numbersComputed").innerHTML=++numbersComputed;
-          //console.log(['current result: ',data['lastResult']])
         };
+        
       }
       function startStop(){
         if(isRunning){
@@ -113,7 +106,6 @@
       }
 
       async function persistentBenchmark(){
-        console.log('collatz gui loaded')
         if(isBenching){
           isBenching=false;
           return;//will probably stop benching after the current benchmark task has finished 
@@ -129,7 +121,7 @@
     </script>
     <div class="current-number">
       <p>current number: </p>
-      <p id="currentNumber" style="width:100%;"></p>
+      <p id="currentNumber"></p>
     </div>
     <div class="numComputed">
       <p>you have computed: </p>

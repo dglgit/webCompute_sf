@@ -18,6 +18,10 @@ def printTable(name):
             baseDict[key].append(d[key])
     print(baseDict)
 
-
-printTable('primesRecord')
-printTable("primesCurrentTask")
+def getPrimes(name):
+    res=conn.execute(f'SELECT tasks from {name}Record WHERE results=1').fetchall()
+    for r in res:
+        print(r['tasks'])
+getPrimes('primes')
+#printTable('primesRecord')
+#printTable("primesCurrentTask")

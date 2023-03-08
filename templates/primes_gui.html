@@ -8,7 +8,7 @@
     <script>
       //var addr='http://127.0.0.1:5000/';
       //var addr='http://192.168.1.86:5000/';
-      var addr='http://192.168.86.241:5000/';//ji tzuoh lins
+      var addr='http://192.168.86.244:5000/';//ji tzuoh lins
       //var addr='http://10.241.124.235:5000/'
       var worker,lastNum=-1,currentNumber=-1,lastResult=-1;
       async function failJob(num){
@@ -45,8 +45,10 @@
             //isRunning=false;
             console.log('just terminated due to server signal');
             var endTime=Date.now();
-            console.log(`start: ${startTime}, end: ${endTime}, elapsed: ${endTime-startTime}ms`)
+            let msg=`start: ${startTime}, end: ${endTime}, elapsed: ${endTime-startTime}ms`;
+            console.log(msg);
             worker.terminate();
+            document.getElementById('benchTime').innerHTML=msg;
             isBenching=false;
             return;
           }
@@ -71,7 +73,7 @@
         }
       }
       function sleep(ms) {
-        console.log(`sleeping for ${ms}`);
+        //console.log(`sleeping for ${ms}`);
         return new Promise(resolve => setTimeout(resolve, ms));
       }
       var startTime;
@@ -121,7 +123,7 @@
     </script>
     <div class="current-number">
       <p>current number: </p>
-      <p id="currentNumber"></p>
+      <p id="currentNumber" style="width:10in; overflow-wrap: break-word;"></p>
     </div>
     <div class="numComputed">
       <p>you have computed: </p>
@@ -134,6 +136,7 @@
       <p id="benchStatus">press the button to start</p>
       <button id="benchmarkControl" onclick="benchmark();">press to start</button>
       <button id="persistentBenchmarkControl" onclick="persistentBenchmark();">persistent benchmarking</button>
+      <p id="benchTime"></p>
     </div>
   </body>
 </html>

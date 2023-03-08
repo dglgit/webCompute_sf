@@ -2,7 +2,7 @@ import sqlite3
 
 jobs=["primes", "collatz"]
 #defaults={"primes":2**20-1,'collatz':1000}
-defaults={'primes':str(2**3217-1),'collatz':str(2**1000-1)}
+defaults={'primes':str(2**3217-1),'collatz':str(2**3217-1),'mersenne':4253}
 print(type(defaults['primes']))
 connection = sqlite3.connect('database.db')
 def clearTables(conn):

@@ -7,14 +7,14 @@ import threading
 from threading import Lock
 lock=Lock()
 jobs=['primes','collatz']
-BENCHMODE=True
+BENCHMODE= True
 benchGracePeriod=10#amount of time in seconds from restarting server and benchmarking
 nextBenchTime=time.time()+benchGracePeriod#time.time is seconds
 endTime=None
 globalVars={'stopFlag':False}
 stopFlag=False
-benchAmt=10
-endValues={'primes': int(defaults['primes'])+32*2,'collatz': int(defaults['collatz'])+200}
+#benchAmt=10
+endValues={'primes': int(defaults['primes'])+50*2,'collatz': int(defaults['collatz'])+2*100}
 app = Flask(__name__)
 CORS(app,resources={r'/*':{'origins':'*'}})
 def get_db_connection():
@@ -53,7 +53,7 @@ def getJob():
             else:
                 num=int(conn.execute(f"SELECT task from {jobType}CurrentTask").fetchall()[0]['task'])
                 conn.execute(f"UPDATE {jobType}CurrentTask SET task=?",[str(num+2)])
-                conn.commit()
+            conn.commit()
             #conn.close()
             #print("get job num type is: ",type(num))
             return jsonify({"task":str(num)})
@@ -80,8 +80,11 @@ def regDisconnect():
 def submitJob():
     args=request.json
     computed=args['task']#will probably be list(later)
-    result=args['result']
-    jobType=args['type']
+    try:
+        result=args['result']
+        jobType=args['type']
+    except KeyError:
+        print(args)
     #conn = get_db_connection()
     with lock:
         conn.execute(f"INSERT INTO {jobType}Record(tasks,results) VALUES (?,?)",[computed,result])

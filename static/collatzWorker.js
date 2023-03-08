@@ -1,6 +1,6 @@
 var currentNumber;
 //const addr="http://192.168.1.86:5000/"//att
-const addr='http://192.168.86.241:5000/'//ji tzuoh lins
+const addr='http://192.168.86.244:5000/'//ji tzuoh lins
 importScripts("https://cdn.jsdelivr.net/npm/gmp-wasm/dist/mini.umd.min.js")
 //const addr ="http://10.241.124.235:5000/"
 //const addr='http://127.0.0.1:5000/';
@@ -81,7 +81,7 @@ async function getJob(){
         });
         console.log(result.status);
         jr=await result.json();
-        return jr['task']
+        return jr['task'];
     }
 
     //randomly breaks sometimes with typerror maybe because all the request have the same ip address for some reason
@@ -113,20 +113,28 @@ async function getJob(){
     console.log(`data: ${jr}, task is ${jr['task']}`);
     return jr['task'];
 }
-async function submitJob(computedNum,result){
+async function submitJob(computedNum,cresult){
+    //postMessage(JSON.stringify({'result':cresult,'balls':4}));
+    //console.log('submitting job')
     var dataBody=JSON.stringify({
         'type':'collatz',
         'task': computedNum,
-        'result': result
+        "poo":7,
+        'result': cresult
     });
-    var result = await fetch(addr+'submit-job',{
+    //cant console log i forgot
+    await fetch(addr+'submit-job',{
         method:'POST',
         headers:{
             'Content-Type': 'application/json'
         },
-        body: dataBody
+        body: JSON.stringify({
+            'type':'collatz',
+            'task': computedNum,
+            'poo':cresult,
+            'result': cresult
+        })
     });
-    var jr=await result.json();
     //console.log(jr);
     return;
 }
@@ -200,10 +208,10 @@ function nothing(x){
     return false;
 }
 async function mainloop(){
-    console.log("starting");
+    console.log("starting collatz");
     var number=-1,result=-1,lastNum=-1;
     var i=300;
-    while(i-->0){
+    while(true){
         //console.log("asdffsdf");
         number = await getJob();//number might be a string from now on
         if(number==-2){
@@ -213,11 +221,49 @@ async function mainloop(){
         }
         //console.log("task: "+number)
         postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
-        //result=await computeCollatz(number);
-        result=nothing(number)
+        result=false;//await computeCollatz(number);
+        //result=false;//nothing(number);//somehow undefined sometimes on phone
+        //postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
+        //if value of json is indefined that entry just wont show up
         await submitJob(number,result);
         lastNum=number;
         
     }
 }
 mainloop();
+function strToMpz(str,out,binding){
+    const strPtr=binding.malloc_cstr(str);
+    binding.mpz_init_set_str(out,strPtr,10);
+    binding.mpz_t_frees(strPtr);
+}
+async function betterMainloop(){
+    await gmp.init().then(async ({binding})=>{
+        const numberPtr=binding.mpz_t();
+        var number=-1,result=-1,lastNum=-1;
+        while(true){
+            number= await getJob();
+            if(number==-2){
+                console.log('stop signal recieved quitting ')
+                postMessage("q");
+                return;
+            }
+            postMessage(JSON.stringify({"lastNumber":lastNum,"currentNumber":number,"lastResult":result}));
+            strToMpz(number,numberPtr,binding);
+            result=0;
+            if (false){
+                while(binding.mpz_cmp_ui(numberPtr,1)>1){
+                    if(binding.mpz_tstbit(numberPtr,0)){
+                        binding.mpz_mul_ui(numberPtr,numberPtr,3);
+                        binding.mpz_add_ui(numberPtr,numberPtr,1);
+                    }else{
+                        binding.mpz_divexact_ui(numberPtr,numberPtr,2);
+                    }
+                    binding.mpz_add_ui(count,count,1);
+                    ++result;
+                }
+            }
+            await submitJob(number,result);
+        }
+    })
+}
+//betterMainloop();

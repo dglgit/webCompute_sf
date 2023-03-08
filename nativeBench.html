@@ -7,36 +7,58 @@
             
             function collatz(numberPtrOg,binding){
                 const numberPtr=binding.mpz_t();
-                binding.mpz_add(numberPtr,numberPtrOg,makeInt(0,binding));
-                const three=makeInt(3,binding);
-                const one = makeInt(1,binding);
-                const two=makeInt(2,binding);
-                const count = makeInt(1,binding);
+                binding.mpz_init_set(numberPtr,numberPtrOg);
+                //const two=makeInt(2,binding);
+                const count = makeInt(0,binding);
                 //console.log([binding.mpz_to_string(numberPtr,10),binding.mpz_cmp_ui(numberPtr,one)]);
                 while(binding.mpz_cmp_ui(numberPtr,1)>0){
                     //console.log(binding.mpz_to_string(numberPtr,10));
                     if(binding.mpz_tstbit(numberPtr,0)){
-                        binding.mpz_mul(numberPtr,numberPtr,three);
-                        binding.mpz_add(numberPtr,numberPtr,one);
+                        binding.mpz_mul_ui(numberPtr,numberPtr,3);
+                        binding.mpz_add_ui(numberPtr,numberPtr,1);
                     }else{
-                        binding.mpz_divexact(numberPtr,numberPtr,two);
+                        binding.mpz_divexact_ui(numberPtr,numberPtr,2);
                     }
-                    binding.mpz_add(count,count,one);
+                    binding.mpz_add_ui(count,count,1);
                 }
                 //binding.mpz_clears(numberPtr);
                 binding.mpz_t_frees(numberPtr);
-                return binding.mpz_to_string(count,10);
+                return binding.mpz_get_ui(count,10);
             }
-            async function testCollatz(iters){
+            function nativeCollatz(number){
+                let copy = number;
+                let count=0;
+                while(copy>1n){
+                    //console.log([copy,count]);
+                    if(copy%2n==1n){
+                        copy=3n*copy+1n;
+                    }else{
+                        copy=copy/2n;
+                    }
+                    count++;
+                }
+                return count;
+            }
+            async function testCollatz(startp,iters){
                 await gmp.init().then(({binding})=>{
                     console.log('starting collatz test')
-                    const gstart=makeMersenneLow(1,binding);
+                    const gstart=makeMersenneLow(startp,binding);
                     let two = makeInt(2,binding);
                     let totalTime=0;
+                    const numberPtr=binding.mpz_t();
                     for(let i =0;i<iters;++i){
                         let startTime=Date.now();
-                        let res=collatz(gstart,binding);
-                        console.log([res,binding.mpz_get_si(gstart)])
+                        binding.mpz_init_set(gstart);
+                        const count = makeInt(1,binding);
+                        while(binding.mpz_cmp_ui(numberPtr,1)>1){
+                            if(binding.mpz_tstbit(numberPtr,0)){
+                                binding.mpz_mul_ui(numberPtr,numberPtr,3);
+                                binding.mpz_add_ui(numberPtr,numberPtr,1);
+                            }else{
+                                binding.mpz_divexact_ui(numberPtr,numberPtr,2);
+                            }
+                            binding.mpz_add_ui(count,count,1);
+                        }
                         let elapsed=Date.now()-startTime;
                         totalTime+=elapsed;
                         binding.mpz_add(gstart,gstart,two);
@@ -49,13 +71,55 @@
             function lucasLehmer(p,binding){
                 const mersenne= makeMersenneLow(p,binding);
                 const s = makeInt(4,binding);
-                const two=makeInt(2,binding)
+                //const two=makeInt(2,binding)
                 for(var i=0;i<p-2;++i){
-                    binding.mpz_mul(s,s,s);
-                    binding.mpz_add(s,s,two);
-                    binding.mpz_mod(s,s,mersenne);
+                    //binding.mpz_mul(s,s,s);
+                    binding.mpz_powm_ui(s,s,2,mersenne);
+                    binding.mpz_sub_ui(s,s,2);
+                    //binding.mpz_mod(s,s,mersenne);
                 }
                 return binding.mpz_get_si(s)==0;//true means prime
+            }
+            function nativeLucasLehmer(p,binding){
+                let mersenne=2n**p-1n;
+                let s=4n;
+                for(let i=0;i<p-2n;++i){
+                    //console.log(s)
+                    s=(s*s-2n)%mersenne;
+                }
+                return s==0n;
+            }
+            async function testLucas(p,iters){
+                console.log('testing lucas lehmer');
+                await gmp.init().then(async ({binding})=>{
+                    let totalElapsed=0;
+                    const one=makeInt(1,binding);
+                    const mersenne=binding.mpz_t();
+                    const ip=binding.mpz_t()
+                    const s=makeInt(4,binding);
+                    for(let i=0;i<iters;++i){
+                        //console.log(i)
+                        //binding.mpz_set_ui(ip,i*2+p);
+                        binding.mpz_set_si(s,4);
+                        let startTime=Date.now();
+                        binding.mpz_mul_2exp(mersenne,one,2*i+p);
+                        binding.mpz_sub_ui(mersenne,mersenne,1);
+                        //console.log(['mersenne,',binding.mpz_to_string(mersenne,10)]);
+                        for(var j=0;j<p+2*i-2;++j){
+                            //console.log(binding.mpz_to_string(s,10));
+                            //binding.mpz_mul(s,s,s);
+                            binding.mpz_powm_ui(s,s,2,mersenne);
+                            binding.mpz_sub_ui(s,s,2);
+                            //binding.mpz_mod(s,s,mersenne);
+                        }
+                        result=binding.mpz_cmp_ui(s,0)==0;
+                        //console.log(result)
+                        let elapsed=Date.now()-startTime;
+                        totalElapsed+=elapsed
+                    }
+                    console.log(`mersennes took ${totalElapsed} in total, avg of ${totalElapsed/iters} per iter`);
+                });
+                
             }
             function singleMillerRabinGMPLow(numberPtr,s,d,binding){//all inputs are pointers
                 //gmp.init().then(({binding})=>{
@@ -102,24 +166,107 @@
                 //binding.mpz_t_frees(d,two,one)
                 return true;
             }
-            
-            async function testPrimeFull(iters){
-                await gmp.init().then(({binding})=>{
-                    console.log("starting prime test")
-                    const start=makeMersenneLow(3217,binding);//3217
+            function slowMillerRabin(number,iters){
+                //everything is big int
+                let d=number-1;
+                let s=0;
+                while(d&1n){
+                    d=d/2n;
+                    ++s;
+                }
+                
+            }
+            async function testPrimeFull(startp,iters){
+                await gmp.init().then(async ({binding})=>{
+                    console.log("starting prime test");
                     let totalTime=0;
-                    const two=makeInt(2,binding);
+                    
+                    let result;
                     for(let i=0;i<iters;++i){
+                        const start=makeMersenneLow(startp,binding);
+                        binding.mpz_add_ui(start,start,2*i);
                         let startTime=Date.now();
-                        millerRabinGMPLow(start,10,binding);
+                        result=efficientMillerRabin(start, 40,binding);
+                        if(result) console.log([result,binding.mpz_to_string(start,10)]);//,binding.mpz_to_string(start,10));
                         let elapsed=Date.now()-startTime;
                         totalTime+=elapsed;
-                        binding.mpz_add(start,start,two);
+                        await binding.reset();
                         
                     }
                     console.log(`${iters} iters of miller rabin testing took ${totalTime}, avg ${totalTime/iters} per iteration`);
                     binding.reset()
+                    //console.log(result)
                 }) 
+            }
+            function nativeMillerRabin(number,iters=40){
+                //number is odd bigint
+                let minus1=number-1n;
+                let d = minus1;
+                let s=0n;
+                while(!(d&1n)){
+                    d=d/2n;
+                    ++s;
+                }
+                let primeFlag=false;
+                for(let i=0;i<iters;++i){
+                    let a=BigInt(Math.floor(Math.random()*(Number(BigInt.asIntN(64,number))-4)+2))//may overflow but hopefully not eveyr number is a liar
+
+                    let start=(a%number)**d%number;
+                    if(start==minus1 || start==1n){
+                        continue;
+                    }
+                    for(let i=1;i<s;++i){
+                        start=start**2n % number;
+                        if(start==minus1){
+                            primeFlag=true;
+                            break;
+                        }
+                    }
+                    if(!primeFlag){
+                        return false;
+                    }
+                    primFlag=false;
+                }
+                return true;
+            }
+            function efficientMillerRabin(numberPtr,iters, binding){
+                let s=0;
+                const d=binding.mpz_t();
+                const one=makeInt(1,binding);
+                binding.mpz_sub_ui(d,numberPtr,1);
+                const two = makeInt(2,binding);
+                while(binding.mpz_tstbit(d,0)){//bitcnt might just be a js number
+                    binding.mpz_divexact(d,d,two);
+                    s++;
+                }
+                const sp=makeInt(s,binding);
+                const a=binding.mpz_t();
+                const start=binding.mpz_t();
+                const minus1=binding.mpz_t();
+                binding.mpz_sub_ui(minus1,numberPtr,1);
+                for(let i=0;i<iters;++i){
+                    let flag=false;
+                    binding.mpz_set_ui(a,2+Math.floor(Math.random()*(binding.mpz_get_si(numberPtr)-3)));
+                    
+                    binding.mpz_powm(start,a,d,numberPtr);
+                    if(binding.mpz_cmp_ui(start,1)==0 || binding.mpz_cmp(start,minus1)==0){
+                        flag=true;
+                        continue;
+                    }
+                    for(let i=0;i<s;++i){
+                        binding.mpz_powm(start,start,two,numberPtr);
+                        if(binding.mpz_cmp(start,minus1)==0){
+                            flag=true;
+                            break;
+                        }
+                    }
+                    if(!flag){
+                        return false;
+                    }
+                    //binding.mpz_t_frees(actualMinus1,start,a,one)
+                }
+                //binding.mpz_t_frees(d,two,one)
+                return true;
             }
             function gmpProbablePrime(number,iters){
                 return gmp.init().then(({calculate})=>{
@@ -151,6 +298,15 @@
             function sleep(ms){
                 return new Promise(resolve => setTimeout(resolve, ms));
             }
+            function doNothingBench(iters){
+                let result;
+                let start=Date.now();
+                for(let i=0;i<iters;++i){
+                    result=false;
+                }
+                let elapsed=Date.now()-start;
+                console.log(`doing nothing for ${iters} iterations took ${elapsed}ms`)
+            }
             async function sleepBench(iters, delay){
                 console.log('starting sleep bench')
                 let start=Date.now();
@@ -160,15 +316,42 @@
                 let elapsed=Date.now()-start;
                 console.log(`sleep test took ${elapsed} overall, average of ${elapsed/iters}`);
             }
+            async function nativeBench(fn, start, iters){
+                let totalTime=0;
+                for(let i=0;i<iters;++i){
+                    let val=start+2n*BigInt(i);
+                    let beginTime=Date.now();
+                    let result=await fn(val);
+                    //console.log(result)
+                    let elapsed=Date.now()-beginTime;
+                    totalTime+=elapsed;
+                }
+                console.log(`${fn.name} over ${iters} iters took ${totalTime}, avg of ${totalTime/iters} per iteration`)
+            }
+            function strToMpz(str,out,binding){
+                const strPtr=binding.malloc_cstr(str);
+                binding.mpz_init_set_str(out,strPtr,10);
+                binding.mpz_t_frees(strPtr);
+            }
             async function mainLoop(){
-                //await testPrimeFull(10);
-                await testCollatz(1000);
-                await testPrimeFull(8);
-
-                await sleepBench(32,0);
-
-                //await simpleBench(async function mr(){await testMillerRabinGMPLow(3253,10)},1);
-                //await simpleBench(async function tc(){await testCollatz(200000,10000)},1)
+                //await testPrimeFull(3217,50);
+                if(!false){
+                    //await nativeBench(nativeMillerRabin,2n**19n -1n,50);
+                    //await testPrimeFull(19,50);
+                    //await nativeBench(nativeLucasLehmer,11213n,10)
+                    //await testLucas(11213,10);
+                    gmp.init().then(async ({binding})=>{
+                        const thing = binding.mpz_t();
+                        strToMpz('')
+                        console.log(await efficientMillerRabin())
+                    })
+                    //await nativeBench(nativeCollatz,2n^1000n-1n,100000);
+                    //await testCollatz(1000,100000)
+                }
+                
+                //await nativeBench(nativeMillerRabin,2n**19n -1n,50);
+                //console.log(nativeMillerRabin(big,40));
+                //console.log(nativeMillerRabin(big+2n,40))
             }
             mainLoop()
         </script>
